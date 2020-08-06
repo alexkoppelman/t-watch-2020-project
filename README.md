@@ -4,6 +4,8 @@ A BLE UART device is advertised to emulate a bangle.js/Espruino to receive [json
 
 Time updates from Gadgetbridge are parsed and applied to the RTC and system time.
 
-Gadgetbridge `notify` messages are shown on screen in a popup message. Other message types are not yet handled.
+Gadgetbridge `notify` messages are shown on screen in a popup message.
 
 `gui.cpp` was refactored slightly to separate GUI header and class implementation. Class definitions are now in `gui.h` so that other files may reference the GUI classes.
+
+Thanks @bburky for starting this up!
