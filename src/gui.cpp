@@ -23,15 +23,22 @@ Created by Lewis he on October 10, 2019.
 
 LV_FONT_DECLARE(Geometr);
 LV_FONT_DECLARE(Ubuntu);
+LV_FONT_DECLARE(Ubuntu_16px);
 LV_IMG_DECLARE(bg);
 LV_IMG_DECLARE(bg1);
 LV_IMG_DECLARE(bg2);
 LV_IMG_DECLARE(bg3);
+LV_IMG_DECLARE(custom_bg);
 LV_IMG_DECLARE(WALLPAPER_1_IMG);
 LV_IMG_DECLARE(WALLPAPER_2_IMG);
 LV_IMG_DECLARE(WALLPAPER_3_IMG);
 LV_IMG_DECLARE(step);
 LV_IMG_DECLARE(menu);
+
+// added by alex
+LV_IMG_DECLARE(msgicon);
+LV_IMG_DECLARE(musicicon);
+LV_IMG_DECLARE(weathericon);
 
 LV_IMG_DECLARE(wifi);
 LV_IMG_DECLARE(light);
@@ -53,25 +60,35 @@ extern QueueHandle_t g_event_queue_handle;
 static lv_style_t settingStyle;
 static lv_obj_t *mainBar = nullptr;
 static lv_obj_t *timeLabel = nullptr;
+static lv_obj_t *dateLabel = nullptr;
+
 static lv_obj_t *menuBtn = nullptr;
 
 static uint8_t globalIndex = 0;
 
 static void lv_update_task(struct _lv_task_t *);
 static void lv_battery_task(struct _lv_task_t *);
+static void lv_updatedate_task(struct _lv_task_t *);
 static void updateTime();
+static void updateDate();
 static void view_event_handler(lv_obj_t *obj, lv_event_t event);
 
 static void wifi_event_cb();
-static void sd_event_cb();
+static void qu_event_cb();
 static void setting_event_cb();
 static void light_event_cb();
 static void modules_event_cb();
 static void camera_event_cb();
 static void wifi_destory();
+// alex added
+static void music_event_cb();
+static void weather_event_cb();
+void destroyMBox();
 
 MenuBar menuBars;
 StatusBar bar;
+
+
 
 StatusBar::StatusBar()
 {
@@ -292,12 +309,14 @@ lv_obj_t* MenuBar::obj(int index) const
     return _obj[index];
 }
 
-MenuBar::lv_menu_config_t _cfg[3] = {
+MenuBar::lv_menu_config_t _cfg[4] = {
+    {.name = "Msg Queue",  .img = (void *) &msgicon,  .event_cb = qu_event_cb},
+    {.name = "Music",  .img = (void *) &musicicon,  .event_cb = music_event_cb},
+    {.name = "Weather",  .img = (void *) &weathericon,  .event_cb = weather_event_cb},
     {.name = "Bluetooth",  .img = (void *) &bluetooth, .event_cb = bluetooth_event_cb},
-    {.name = "WiFi",  .img = (void *) &wifi, .event_cb = wifi_event_cb},
-    // {.name = "SD Card",  .img = (void *) &sd,  /*.event_cb =sd_event_cb*/},
+    //{.name = "WiFi",  .img = (void *) &wifi, /*.event_cb = wifi_event_cb*/},
     // {.name = "Light",  .img = (void *) &light, /*.event_cb = light_event_cb*/},
-    {.name = "Setting",  .img = (void *) &setting, /*.event_cb = setting_event_cb */},
+    // {.name = "Setting",  .img = (void *) &setting, /*.event_cb = setting_event_cb */},
     // {.name = "Modules",  .img = (void *) &modules, /*.event_cb = modules_event_cb */},
     // {.name = "Camera",  .img = (void *) &CAMERA_PNG, /*.event_cb = camera_event_cb*/ }
 };
@@ -330,12 +349,12 @@ void setupGui()
     lv_style_set_image_recolor(&settingStyle, LV_OBJ_PART_MAIN, LV_COLOR_WHITE);
 
     //Create wallpaper
-    void *images[] = {(void *) &bg, (void *) &bg1, (void *) &bg2, (void *) &bg3 };
+    void *images[] = {(void *) &custom_bg, (void *) &bg1, (void *) &bg2, (void *) &bg3 };
     lv_obj_t *scr = lv_scr_act();
     lv_obj_t *img_bin = lv_img_create(scr, NULL);  /*Create an image object*/
     srand((int)time(0));
     int r = rand() % 4;
-    lv_img_set_src(img_bin, images[r]);
+    lv_img_set_src(img_bin, images[0]);
     lv_obj_align(img_bin, NULL, LV_ALIGN_CENTER, 0, 0);
 
     //! bar
@@ -369,10 +388,21 @@ void setupGui()
     static lv_style_t timeStyle;
     lv_style_copy(&timeStyle, &mainStyle);
     lv_style_set_text_font(&timeStyle, LV_STATE_DEFAULT, &Ubuntu);
+    
+    //! Date
+    static lv_style_t dateStyle;
+    lv_style_copy( &dateStyle, &mainStyle);
+    lv_style_set_text_font( &dateStyle, LV_STATE_DEFAULT, &Ubuntu_16px);
 
+    //! Time label
     timeLabel = lv_label_create(mainBar, NULL);
     lv_obj_add_style(timeLabel, LV_OBJ_PART_MAIN, &timeStyle);
     updateTime();
+
+    //! Date label
+    dateLabel = lv_label_create(mainBar, NULL);
+    lv_obj_add_style(dateLabel, LV_OBJ_PART_MAIN, &dateStyle);
+    updateDate();
 
     //! menu
     static lv_style_t style_pr;
@@ -395,6 +425,8 @@ void setupGui()
 
     lv_task_create(lv_update_task, 1000, LV_TASK_PRIO_LOWEST, NULL);
     lv_task_create(lv_battery_task, 30000, LV_TASK_PRIO_LOWEST, NULL);
+    lv_task_create(lv_updatedate_task, 30000, LV_TASK_PRIO_LOWEST, NULL);
+    
 }
 
 void updateStepCounter(uint32_t counter)
@@ -412,6 +444,21 @@ static void updateTime()
     strftime(buf, sizeof(buf), "%H:%M", &info);
     lv_label_set_text(timeLabel, buf);
     lv_obj_align(timeLabel, NULL, LV_ALIGN_IN_TOP_MID, 0, 20);
+}
+
+static void updateDate()
+{
+    time_t now;
+    struct tm  info;
+    char buf[64];
+    time(&now);
+    localtime_r(&now, &info);
+    
+    strftime( buf, sizeof(buf), "%a %d.%b %Y", &info );
+    
+    lv_label_set_text(dateLabel, buf);
+    lv_obj_align(dateLabel, NULL, LV_ALIGN_IN_TOP_MID, 0, 80);
+
 }
 
 void updateBatteryLevel()
@@ -439,7 +486,10 @@ static void lv_update_task(struct _lv_task_t *data)
 {
     updateTime();
 }
-
+static void lv_updatedate_task(struct _lv_task_t *data)
+{
+    updateDate();
+}
 static void lv_battery_task(struct _lv_task_t *data)
 {
     updateBatteryLevel();
@@ -972,7 +1022,7 @@ void MBox::create(const char *text, lv_event_cb_t event_cb, const char **btns, l
     } else {
         lv_msgbox_add_btns(_mbox, btns);
     }
-    lv_obj_set_width(_mbox, LV_HOR_RES - 40);
+    lv_obj_set_width(_mbox, LV_HOR_RES - 20);
     lv_obj_set_event_cb(_mbox, event_cb);
     lv_obj_align(_mbox, NULL, LV_ALIGN_CENTER, 0, 0);
 }
@@ -1085,7 +1135,7 @@ static void wifi_sync_mbox_cb(lv_task_t *t)
             task = nullptr;
 
             //! mbox
-            static const char *btns[] = {"Ok", "Cancle", ""};
+            static const char *btns[] = {"Ok", "Cancel", ""};
             mbox = new MBox;
             mbox->create(format, [](lv_obj_t *obj, lv_event_t event) {
                 if (event == LV_EVENT_VALUE_CHANGED) {
@@ -1304,7 +1354,7 @@ static void create_mbox(const char *txt, lv_event_cb_t event_cb)
     mbox1 = lv_msgbox_create(lv_scr_act(), NULL);
     lv_msgbox_set_text(mbox1, txt);
     lv_msgbox_add_btns(mbox1, btns);
-    lv_obj_set_width(mbox1, LV_HOR_RES - 40);
+    lv_obj_set_width(mbox1, LV_HOR_RES - 20);
     lv_obj_set_event_cb(mbox1, event_cb);
     lv_obj_align(mbox1, NULL, LV_ALIGN_CENTER, 0, 0);
 }
@@ -1324,6 +1374,51 @@ static void destory_mbox()
         mbox1 = nullptr;
     }
 }
+
+/*****************************************************************
+ *
+ *          ! Event for showing msg queue
+ *
+ */
+
+static void qu_event_cb()
+{
+
+    // lv_obj_t *text = lv_label_create(lv_scr_act(), NULL);
+    // lv_label_set_text(text, "T-Watch");
+    // lv_obj_align(text, NULL, LV_ALIGN_CENTER, 0, 0);
+    
+    // // bool restoreMenubars = true;
+    
+    // MenuBar *menubars = MenuBar::getMenuBar();
+    // menubars->hidden(false);
+
+}
+
+/*****************************************************************
+ *
+ *          ! Music Card EVENT
+ *
+ */
+
+static void music_event_cb()
+{
+
+}
+
+
+/*****************************************************************
+ *
+ *          ! Weather Card EVENT
+ *
+ */
+
+static void weather_event_cb()
+{
+    // restoreMenubars = true;
+
+}
+
 
 /*****************************************************************
  *
