@@ -9,3 +9,19 @@ Gadgetbridge `notify` messages are shown on screen in a popup message.
 `gui.cpp` was refactored slightly to separate GUI header and class implementation. Class definitions are now in `gui.h` so that other files may reference the GUI classes.
 
 Thanks @bburky for starting this up!
+
+I am completely new to LVGL so this will all take a bit...
+
+Status:
+Added notifications for Music Player
+Added notifications for Calls
+Added notifications for Weather (using Weather Notification app from Fdroid)
+Added queue screen with Icon. 
+
+To Do:
+- Create message queue screen showing last X messages
+- Limit mssga body display in popup to 165 (more or less??) char. 
+- Create weather screen with forecast
+- Create music player screen with pause/play buttons
+- Add small game
+
