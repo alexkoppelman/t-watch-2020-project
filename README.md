@@ -22,6 +22,7 @@ Status:
 - Limit mssga body display in popup to 165 (more or less??) char.
 
 To Do:
+- Add date to home screen
 - Create message queue screen showing last X messages
 - Create weather screen with forecast
 - Create music player screen with pause/play buttons
