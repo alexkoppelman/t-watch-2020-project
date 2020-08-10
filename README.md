@@ -13,12 +13,12 @@ Thanks @bburky for starting this up!
 I am completely new to LVGL so this will all take a bit...
 
 Status:
-Added notifications for Music Player
-Added notifications for Calls
-Added notifications for Weather (using Weather Notification app from Fdroid)
-Added queue screen with Icon.
-Added weather screen with Icon.
-Added music screen with Icon.
+- Added notifications for Music Player
+- Added notifications for Calls
+- Added notifications for Weather (using Weather Notification app from Fdroid)
+- Added queue screen with Icon.
+- Added weather screen with Icon.
+- Added music screen with Icon.
 
 
 To Do:
