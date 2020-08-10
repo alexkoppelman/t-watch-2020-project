@@ -19,10 +19,9 @@ Status:
 - Added queue screen with Icon.
 - Added weather screen with Icon.
 - Added music screen with Icon.
-
+- Limit mssga body display in popup to 165 (more or less??) char.
 
 To Do:
-- Limit mssga body display in popup to 165 (more or less??) char.
 - Create message queue screen showing last X messages
 - Create weather screen with forecast
 - Create music player screen with pause/play buttons
