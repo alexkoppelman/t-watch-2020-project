@@ -24,6 +24,11 @@
 #include <BLEUtils.h>
 #include <BLE2902.h>
 
+
+
+// AK ADDED
+#include "ArduinoJson.h"
+
 // See the following for generating UUIDs:
 // https://www.uuidgenerator.net/
 
@@ -35,7 +40,7 @@ static MBox *mbox = nullptr;
 
 BLEServer *pServer = NULL;
 BLECharacteristic *pTxCharacteristic;
-uint8_t txValue = 0;
+uint8_t txValue = 1;
 bool bleConnected = false;
 bool bleEnabled = false;
 bool blePairing = false;
@@ -43,6 +48,7 @@ bool restoreMenubars = true;
 
 #define MAX_MESSAGE_SIZE 512
 String message;
+
 
 void processMessage();
 void destroyMBox();
@@ -224,13 +230,19 @@ void setupBle()
     // Create a BLE Characteristic
     pTxCharacteristic = pService->createCharacteristic(
         CHARACTERISTIC_UUID_TX,
-        BLECharacteristic::PROPERTY_NOTIFY);
+        BLECharacteristic::PROPERTY_NOTIFY |
+        BLECharacteristic::PROPERTY_READ |
+        BLECharacteristic::PROPERTY_WRITE);
+
+        // String mydata = "{t:\"music\",n:\"pause\"}";
+        // pTxCharacteristic->setValue(mydata.c_str());
+    
     pTxCharacteristic->setAccessPermissions(ESP_GATT_PERM_READ_ENCRYPTED | ESP_GATT_PERM_WRITE_ENCRYPTED);
     pTxCharacteristic->addDescriptor(new BLE2902());
 
     BLECharacteristic *pRxCharacteristic = pService->createCharacteristic(
         CHARACTERISTIC_UUID_RX,
-        BLECharacteristic::PROPERTY_WRITE);
+        BLECharacteristic::PROPERTY_READ | BLECharacteristic::PROPERTY_WRITE);
     pRxCharacteristic->setAccessPermissions(ESP_GATT_PERM_READ_ENCRYPTED | ESP_GATT_PERM_WRITE_ENCRYPTED);
     pRxCharacteristic->setCallbacks(new MyCallbacks());
 
@@ -241,11 +253,24 @@ void setupBle()
     pServer->getAdvertising()->addServiceUUID(pService->getUUID());
     // Slow advertising interval for battery life
     // The maximum 0x4000 interval of ~16 sec was too slow, I could not reliably connect
+    
+    // alex commented
+    
     pServer->getAdvertising()->setMinInterval(4000);
     pServer->getAdvertising()->setMaxInterval(5000);
+
+    // alex add
+    //pAdvertising->setScanResponse(false);
+    //pAdvertising->setMinPreferred(0x0);
+
     pServer->getAdvertising()->start();
     Serial.println("BLE advertising...");
 }
+/*****************************************************************
+ *
+ *          ! Event for BT
+ *
+ */
 
 void bluetooth_event_cb() {
     // Actually, bluetooth is always advertising currently. This menu button isn't really needed right now.
@@ -265,6 +290,27 @@ void bluetooth_event_cb() {
     // mbox->setBtn(btns);
 }
 
+/*****************************************************************
+ *
+ *          ! Event for showing msg queue
+ *
+ */
+
+void qu_event_cb()
+{
+
+    // lv_obj_t *text = lv_label_create(lv_scr_act(), NULL);
+    // lv_label_set_text(text, "T-Watch");
+    // lv_obj_align(text, NULL, LV_ALIGN_CENTER, 0, 0);
+    
+    // // bool restoreMenubars = true;
+    
+    // MenuBar *menubars = MenuBar::getMenuBar();
+    // menubars->hidden(false);
+
+}
+
+
 void destroyMBox() {
     delete mbox;
     mbox = nullptr;
@@ -272,4 +318,72 @@ void destroyMBox() {
         MenuBar *menubars = MenuBar::getMenuBar();
         menubars->hidden(false);
     }
+}
+
+/*****************************************************************
+ *
+ *          ! Music Card EVENT
+ *
+ */
+
+void music_play_handler(lv_obj_t *obj, lv_event_t event)
+{
+    if (event == LV_EVENT_CLICKED) {
+        Serial.printf("Play Clicked\n");
+        
+        String mydata = "{t:\"music\",n:\"play\"}";
+        
+        pTxCharacteristic->setValue(mydata.c_str()); // Set value.
+        pTxCharacteristic->notify();                // Notify value.
+        
+        Serial.println(mydata);
+    }
+}
+
+void music_pause_handler(lv_obj_t *obj, lv_event_t event)
+{
+    
+    if (event == LV_EVENT_CLICKED) {
+        Serial.printf("Pause Clicked\n");
+
+        String msg1;
+        
+        DynamicJsonDocument doc(1024);
+        doc["t"] = "info";
+        doc["msg"] = "Ho";
+        
+        
+        serializeJson(doc, msg1);
+        //unsigned int lastStringLength = msg1.length();
+        Serial.println(msg1);
+
+        //char* unquoted  = msg1.replace(/"([^"]+)":/g, '$1:');
+
+        pTxCharacteristic->setValue(msg1.c_str()); // Set value.
+        pTxCharacteristic->notify();                // Notify value.
+        //TODO  REMOVE Json Doc from memory
+
+    }
+}
+
+void music_event_cb()
+{
+    restoreMenubars = true;
+
+    lv_obj_t *label;
+
+    lv_obj_t *btn1 = lv_btn_create(lv_scr_act(), NULL);
+    lv_obj_set_event_cb(btn1, music_play_handler);
+    lv_obj_align(btn1, NULL, LV_ALIGN_CENTER, 0, -40);
+    label = lv_label_create(btn1, NULL);
+    lv_label_set_text(label, "Play");
+    
+    lv_obj_t *btn2 = lv_btn_create(lv_scr_act(), NULL);
+    lv_obj_set_event_cb(btn2, music_pause_handler);
+    lv_obj_align(btn2, NULL, LV_ALIGN_CENTER, 0, 30);
+    label = lv_label_create(btn2, NULL);
+    lv_label_set_text(label, "Pause");
+
+    // MenuBar *menubars = MenuBar::getMenuBar();
+    //menubars->hidden(false);
 }
