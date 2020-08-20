@@ -26,9 +26,13 @@ unsigned long notify_id = 0;
 
 void process_gadgetbridge_notify() {
     notify_id = json["id"];
-    char format[512+3];
+        // limit body to 256 char
+
+    char format[256+3];
     const char* src = json["src"]; // Debug sends "sender"
     const char* title = json["title"]; // Debug sends "subject"
+    // limit body to 165 char
+    
     const char* body = json["body"];
     TTGOClass *ttgo = TTGOClass::getWatch();
     
@@ -100,6 +104,32 @@ void process_gadgetbridge_json(const char* json_string) {
                 }
                 ttgo->motor->adjust(255);
                 ttgo->motor->onec();
+
+    }  else if (!strcmp(t, "weather")){
+                char format[512+3];
+                // weather gets: temp,hum,txt,wind,loc
+                const char* wTemp = json["temp"]; // Debug sends "call command"
+                const char* wHum = json["hum"]; // Debug sends "name of caller"
+                const char* wTxt = json["txt"]; // Debug sends "number calling"
+                const char* wWind = json["wind"]; // Debug sends "call command"
+                const char* wLoc = json["loc"]; // Debug sends "name of caller"
+                TTGOClass *ttgo = TTGOClass::getWatch();
+                // vibrate if call recieved
+
+                snprintf(format, sizeof(format), "%s: %s\n\n%s", wTemp, wHum, wTxt);
+                delete mbox;
+                mbox = new MBox;
+                mbox->create(format, [](lv_obj_t *obj, lv_event_t event) {
+                    if (event == LV_EVENT_VALUE_CHANGED) {
+                        delete mbox;
+                        mbox = nullptr;
+                        //notify_id = 0;
+                    }
+                });
+                if (!ttgo->bl->isOn()) {
+                    xEventGroupSetBits(*get_isr_group(), WATCH_FLAG_SLEEP_EXIT);
+                }
+
 
     } else {
         Serial.printf("Unhandled GB type: %s\n", t);
