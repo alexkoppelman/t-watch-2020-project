@@ -19,6 +19,8 @@ Created by Lewis he on October 10, 2019.
 #include "SD.h"
 #include "ble.h"
 
+
+
 #define RTC_TIME_ZONE   "CST-8"
 
 LV_FONT_DECLARE(Geometr);
@@ -81,7 +83,7 @@ static void modules_event_cb();
 static void camera_event_cb();
 static void wifi_destory();
 // alex added
-static void music_event_cb();
+//static void music_event_cb();
 static void weather_event_cb();
 void destroyMBox();
 
@@ -309,13 +311,13 @@ lv_obj_t* MenuBar::obj(int index) const
     return _obj[index];
 }
 
-MenuBar::lv_menu_config_t _cfg[4] = {
+MenuBar::lv_menu_config_t _cfg[5] = {
     {.name = "Msg Queue",  .img = (void *) &msgicon,  .event_cb = qu_event_cb},
     {.name = "Music",  .img = (void *) &musicicon,  .event_cb = music_event_cb},
     {.name = "Weather",  .img = (void *) &weathericon,  .event_cb = weather_event_cb},
     {.name = "Bluetooth",  .img = (void *) &bluetooth, .event_cb = bluetooth_event_cb},
     //{.name = "WiFi",  .img = (void *) &wifi, /*.event_cb = wifi_event_cb*/},
-    // {.name = "Light",  .img = (void *) &light, /*.event_cb = light_event_cb*/},
+     {.name = "Light",  .img = (void *) &light, .event_cb = light_event_cb},
     // {.name = "Setting",  .img = (void *) &setting, /*.event_cb = setting_event_cb */},
     // {.name = "Modules",  .img = (void *) &modules, /*.event_cb = modules_event_cb */},
     // {.name = "Camera",  .img = (void *) &CAMERA_PNG, /*.event_cb = camera_event_cb*/ }
@@ -388,6 +390,11 @@ void setupGui()
     static lv_style_t timeStyle;
     lv_style_copy(&timeStyle, &mainStyle);
     lv_style_set_text_font(&timeStyle, LV_STATE_DEFAULT, &Ubuntu);
+    
+    //! Queue Style
+    static lv_style_t queueStyle;
+    lv_style_copy(&queueStyle, &mainStyle);
+    lv_style_set_text_font(&queueStyle, LV_STATE_DEFAULT, &Ubuntu_16px);
     
     //! Date
     static lv_style_t dateStyle;
@@ -1384,27 +1391,22 @@ static void destory_mbox()
 static void qu_event_cb()
 {
 
-    // lv_obj_t *text = lv_label_create(lv_scr_act(), NULL);
-    // lv_label_set_text(text, "T-Watch");
-    // lv_obj_align(text, NULL, LV_ALIGN_CENTER, 0, 0);
-    
-    // // bool restoreMenubars = true;
-    
-    // MenuBar *menubars = MenuBar::getMenuBar();
-    // menubars->hidden(false);
+    lv_obj_t *label = lv_label_create(bar.self(), NULL);
+    //lv_obj_align(label, NULL, LV_ALIGN_CENTER, 0, 0);
+   // lv_obj_set_size(label, LV_HOR_RES, LV_VER_RES - 30);
+   
 
+
+    lv_label_set_text(label, "Here display the last few messages, maybe they need to be cropped? dunno!");
+    // label->align(label.self(),LV_ALIGN_IN_LEFT_MID);
+
+    menuBars.hidden(false);
+
+    sw->align(bar.self(), LV_ALIGN_OUT_BOTTOM_RIGHT);
+
+    
 }
 
-/*****************************************************************
- *
- *          ! Music Card EVENT
- *
- */
-
-static void music_event_cb()
-{
-
-}
 
 
 /*****************************************************************
@@ -1415,7 +1417,8 @@ static void music_event_cb()
 
 static void weather_event_cb()
 {
-    // restoreMenubars = true;
+    
+    //sw->align(bar.self(), LV_ALIGN_OUT_BOTTOM_MID);
 
 }
 
