@@ -183,5 +183,6 @@ void updateBatteryIcon(lv_icon_battery_t index);
 void wifi_list_add(const char *ssid);
 void wifi_connect_status(bool result);
 void updateBatteryLevel();
-
+// alex added
+void music_event_cb();
 #endif /*__GUI_H */
